@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
+/* ─── GreenLane 深色主题 · 数据可视化配色经 CVD/对比度校验 ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --page: #0d0d0d;          /* 页面底色 */
+  --surface: #1a1a19;       /* 卡片/图表表面 */
+  --surface-2: #232322;     /* 悬浮态表面 */
+  --ink-1: #ffffff;         /* 主文字 */
+  --ink-2: #c3c2b7;         /* 次级文字 */
+  --ink-3: #898781;         /* 弱化/坐标轴 */
+  --hairline: rgba(255, 255, 255, 0.1);
+  --grid: #2c2c2a;
+  --baseline: #383835;
+  --series-a: #3987e5;      /* 表A · 最终裁定日 */
+  --series-b: #199e70;      /* 表B · 可递交日 */
+  --good: #0ca30c;          /* 前进 */
+  --bad: #d03b3b;           /* 倒退 */
+  --warn: #fab219;          /* 暂停/警示 */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-hairline: var(--hairline);
+  --color-grid: var(--grid);
+  --color-series-a: var(--series-a);
+  --color-series-b: var(--series-b);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
+  --font-sans: var(--font-geist-sans), var(--font-noto-sc), system-ui,
+    -apple-system, "PingFang SC", "Segoe UI", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--page);
+  color: var(--ink-1);
+  font-family: var(--font-sans);
+}
+
+/* ─── 极光背景 ─── */
+@keyframes aurora-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(60px, -40px) scale(1.15); }
+  66% { transform: translate(-50px, 30px) scale(0.95); }
+}
+
+.aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+  opacity: 0.16;
+  pointer-events: none;
+  animation: aurora-drift 18s ease-in-out infinite;
+}
+
+/* ─── 新闻轮转 ─── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  animation: marquee 55s linear infinite;
+  width: max-content;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* ─── 进场动效 ─── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* 呼吸圆点（"公告已发布"徽章） */
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(12, 163, 12, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(12, 163, 12, 0); }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2.4s ease-in-out infinite;
 }

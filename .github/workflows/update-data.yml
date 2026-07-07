@@ -1,0 +1,40 @@
+# 每日自动更新数据:美国排期公告 + 联邦公报法规动态 + 加拿大 EE 抽签
+# cron 为 UTC 时间:10:00 UTC = 美东夏令时 06:00(冬令时 05:00)
+name: daily-data-update
+
+on:
+  schedule:
+    - cron: "0 10 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 抓取美国排期公告(增量)
+        run: python3 scripts/scrape_bulletins.py
+
+      - name: 抓取联邦公报法规动态
+        run: python3 scripts/fetch_news.py
+
+      # GitHub 托管 runner 预装 Chrome;IRCC 的 Akamai 防护可能拦截
+      # 数据中心 IP,失败时不阻塞其余数据更新
+      - name: 抓取加拿大 EE 抽签数据
+        run: python3 scripts/fetch_canada.py || echo "::warning::加拿大源抓取失败(可能为 IP 拦截),保留现有数据"
+
+      - name: 提交数据变更
+        run: |
+          git config user.name "greenlane-bot"
+          git config user.email "greenlane-bot@users.noreply.github.com"
+          git add src/data
+          if git diff --cached --quiet; then
+            echo "数据无变化,跳过提交"
+          else
+            git commit -m "chore: 每日数据更新 $(date -u +%F)"
+            git push
+          fi
