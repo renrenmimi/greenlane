@@ -476,7 +476,7 @@ export default function HomeClient({
     <>
       {/* 国家切换:桌面端居中,窄屏保持可横向滚动 */}
       <div className="sticky top-16 z-40 border-y border-hairline bg-page/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-5 py-3 md:justify-center">
+        <div className="scroll-row mx-auto flex max-w-6xl gap-2 px-5 py-3 md:justify-center">
           {(Object.keys(REGION_FLAGS) as Region[]).map((r) => (
             <button
               key={r}
