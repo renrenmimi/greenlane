@@ -68,6 +68,25 @@ body {
   border-color: rgba(57, 135, 229, 0.6);
 }
 
+/* 原生 select 的箭头贴着右边缘,与左侧 16px 文字内边距不对称。
+   关掉原生外观改为自绘,箭头与文字左右各留 16px。 */
+select.gl-field {
+  appearance: none;
+  padding-right: 2.75rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23898781' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+}
+
+select.gl-field:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23c3c2b7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
+}
+
+/* date 的日历图标同样对齐到右侧 16px */
+input[type="date"].gl-field {
+  padding-right: 0.75rem;
+}
+
 /* iOS Safari 中 date 的值默认贴顶,且日历图标对比度过低 */
 input[type="date"].gl-field::-webkit-date-and-time-value {
   text-align: left;
