@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bulletin,
   CountryCode,
@@ -23,9 +23,15 @@ import {
   birthCountryName,
   findBirthCountry,
 } from "@/lib/countries";
-import { forecastNextBulletin, shortMonth } from "@/lib/schedule";
+import {
+  MIN_PRIORITY_DATE,
+  forecastNextBulletin,
+  shortMonth,
+  toIsoDate,
+} from "@/lib/schedule";
 import { formatDate, monthLabel } from "@/lib/bulletin";
 import { useI18n } from "@/lib/i18n";
+import { useNow } from "@/lib/useNow";
 
 const DAY = 86_400_000;
 
@@ -69,9 +75,7 @@ export default function MyQuery({
   const [pd, setPd] = useState("");
   /* 估算基准:表A(排到即可获批) / 表B(排到即可递交 I-485) */
   const [basis, setBasis] = useState<TrendKey>("fa");
-  /* 挂载后再取本地时间,避免 SSR 水合不一致 */
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => setNow(new Date()), []);
+  const now = useNow();
 
   const birth = findBirthCountry(birthCode);
   const country: CountryCode = birth?.queue ?? "ALL";
@@ -129,6 +133,9 @@ export default function MyQuery({
   /* 下一期公告发布预测 */
   const forecast = now ? forecastNextBulletin(latest, now) : null;
   const nextMonthName = forecast ? shortMonth(forecast.nextBulletin.month, lang) : "";
+
+  /* 优先日上限取当天;挂载前为 undefined,与服务端渲染结果一致 */
+  const maxPd = now ? toIsoDate(now) : undefined;
 
   return (
     <div id="my-query" className="relative scroll-mt-20 overflow-hidden">
@@ -189,8 +196,8 @@ export default function MyQuery({
             {forecast && <p className="mt-1.5 text-ink-3">{t.forecast.note}</p>}
           </div>
 
-          {/* 输入行 */}
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr]">
+          {/* 输入行:中屏两列时日期占满整行,避免第三格留下半格空位 */}
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold text-ink-3">
                 {t.query.catLabel}
@@ -198,7 +205,7 @@ export default function MyQuery({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-xl border border-hairline bg-page px-4 py-3 text-ink-1 outline-none [color-scheme:dark] focus:border-series-a/60"
+                className="gl-field"
               >
                 <optgroup label={t.query.employment}>
                   {EMPLOYMENT_CATEGORIES.map((c) => (
@@ -223,7 +230,7 @@ export default function MyQuery({
               <select
                 value={birthCode}
                 onChange={(e) => setBirthCode(e.target.value)}
-                className="w-full rounded-xl border border-hairline bg-page px-4 py-3 text-ink-1 outline-none [color-scheme:dark] focus:border-series-a/60"
+                className="gl-field"
               >
                 <optgroup label={t.query.popularGroup}>
                   {POPULAR_COUNTRIES.map((c) => (
@@ -241,15 +248,18 @@ export default function MyQuery({
                 </optgroup>
               </select>
             </label>
-            <label className="block">
+            <label className="block sm:col-span-2 lg:col-span-1">
               <span className="mb-1.5 block text-xs font-semibold text-ink-3">
                 {t.query.pdLabel}
               </span>
+              {/* 限定可选范围:移动端原生滚轮不再从公元 1 年起滑 */}
               <input
                 type="date"
                 value={pd}
+                min={MIN_PRIORITY_DATE}
+                max={maxPd}
                 onChange={(e) => setPd(e.target.value)}
-                className="w-full rounded-xl border border-hairline bg-page px-4 py-[11px] text-ink-1 outline-none [color-scheme:dark] focus:border-series-a/60"
+                className="gl-field"
               />
             </label>
           </div>

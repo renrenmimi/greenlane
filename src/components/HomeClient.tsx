@@ -30,7 +30,9 @@ import {
   trendSeries,
 } from "@/lib/bulletin";
 import { CanadaData } from "@/lib/canada";
+import { MIN_PRIORITY_DATE, toIsoDate } from "@/lib/schedule";
 import { useI18n } from "@/lib/i18n";
+import { useNow } from "@/lib/useNow";
 import CanadaPanel from "@/components/CanadaPanel";
 import CountryPlaceholder from "@/components/CountryPlaceholder";
 import { MovementBadge } from "@/components/MyQuery";
@@ -97,6 +99,8 @@ function USPanel({ bulletins, updatedAt }: { bulletins: Bulletin[]; updatedAt: s
   const [table, setTable] = useState<TableKey>("finalAction");
   const [category, setCategory] = useState("EB2");
   const [pdInput, setPdInput] = useState("");
+  const now = useNow();
+  const today = now ? toIsoDate(now) : undefined;
 
   const latest = bulletins[bulletins.length - 1];
   const prev = bulletins[bulletins.length - 2];
@@ -151,25 +155,29 @@ function USPanel({ bulletins, updatedAt }: { bulletins: Bulletin[]; updatedAt: s
           </div>
         </div>
 
-        {/* 筛选行:作用于下方所有内容 */}
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <div className="flex rounded-full border border-hairline bg-surface p-1 text-sm">
-            {(
-              [
-                ["employment", t.query.employment],
-                ["family", t.query.family],
-              ] as [Kind, string][]
-            ).map(([k, label]) => (
-              <button
-                key={k}
-                onClick={() => switchKind(k)}
-                className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
-                  kind === k ? "bg-surface-2 text-ink-1" : "text-ink-3 hover:text-ink-2"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+        {/* 筛选行:作用于下方所有内容。
+            窄屏三组各占一行,避免跨组换行形成错落的阶梯;
+            英文标签较长,分段控件在组内可横向滚动而不撑破视口 */}
+        <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+          <div className="scroll-row lg:shrink-0">
+            <div className="flex w-max rounded-full border border-hairline bg-surface p-1 text-sm">
+              {(
+                [
+                  ["employment", t.query.employment],
+                  ["family", t.query.family],
+                ] as [Kind, string][]
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  onClick={() => switchKind(k)}
+                  className={`whitespace-nowrap rounded-full px-3.5 py-2 font-medium transition-colors sm:px-4 sm:py-1.5 ${
+                    kind === k ? "bg-surface-2 text-ink-1" : "text-ink-3 hover:text-ink-2"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -177,7 +185,7 @@ function USPanel({ bulletins, updatedAt }: { bulletins: Bulletin[]; updatedAt: s
               <button
                 key={c.code}
                 onClick={() => setCountry(c.code)}
-                className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={`rounded-full border px-3.5 py-2 text-sm font-medium transition-colors sm:px-4 sm:py-1.5 ${
                   country === c.code
                     ? "border-series-a/60 bg-series-a/15 text-ink-1"
                     : "border-hairline bg-surface text-ink-3 hover:text-ink-2"
@@ -188,23 +196,25 @@ function USPanel({ bulletins, updatedAt }: { bulletins: Bulletin[]; updatedAt: s
             ))}
           </div>
 
-          <div className="flex rounded-full border border-hairline bg-surface p-1 text-sm">
-            {(
-              [
-                ["finalAction", t.us.tableA],
-                ["datesForFiling", t.us.tableB],
-              ] as [TableKey, string][]
-            ).map(([tb, label]) => (
-              <button
-                key={tb}
-                onClick={() => setTable(tb)}
-                className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
-                  table === tb ? "bg-surface-2 text-ink-1" : "text-ink-3 hover:text-ink-2"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="scroll-row lg:shrink-0">
+            <div className="flex w-max rounded-full border border-hairline bg-surface p-1 text-sm">
+              {(
+                [
+                  ["finalAction", t.us.tableA],
+                  ["datesForFiling", t.us.tableB],
+                ] as [TableKey, string][]
+              ).map(([tb, label]) => (
+                <button
+                  key={tb}
+                  onClick={() => setTable(tb)}
+                  className={`whitespace-nowrap rounded-full px-3.5 py-2 font-medium transition-colors sm:px-4 sm:py-1.5 ${
+                    table === tb ? "bg-surface-2 text-ink-1" : "text-ink-3 hover:text-ink-2"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -275,9 +285,9 @@ function USPanel({ bulletins, updatedAt }: { bulletins: Bulletin[]; updatedAt: s
 
           <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
             {/* 图表卡 */}
-            <div className="rounded-2xl border border-hairline bg-surface p-5">
+            <div className="rounded-2xl border border-hairline bg-surface p-4 sm:p-5">
               {/* 图例 */}
-              <div className="mb-4 flex items-center gap-6 text-sm text-ink-2">
+              <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-2">
                 <span className="flex items-center gap-2">
                   <span className="h-0.5 w-5 rounded" style={{ background: SERIES_A }} />
                   {t.us.legendA}
@@ -288,7 +298,7 @@ function USPanel({ bulletins, updatedAt }: { bulletins: Bulletin[]; updatedAt: s
                 </span>
               </div>
 
-              <div className="h-[380px]">
+              <div className="h-[300px] sm:h-[380px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={points} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
                     <CartesianGrid stroke="var(--grid)" strokeWidth={1} vertical={false} />
@@ -393,8 +403,10 @@ function USPanel({ bulletins, updatedAt }: { bulletins: Bulletin[]; updatedAt: s
                 <input
                   type="date"
                   value={pdInput}
+                  min={MIN_PRIORITY_DATE}
+                  max={today}
                   onChange={(e) => setPdInput(e.target.value)}
-                  className="mt-4 w-full rounded-xl border border-hairline bg-page px-4 py-2.5 text-ink-1 outline-none [color-scheme:dark] focus:border-series-a/60"
+                  className="gl-field mt-4"
                 />
                 {estimate && "current" in estimate && (
                   <p className="mt-4 rounded-xl bg-good/10 px-4 py-3 text-sm font-semibold text-good">

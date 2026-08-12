@@ -46,6 +46,55 @@ body {
   font-family: var(--font-sans);
 }
 
+/* ─── 表单控件 ─── */
+/* select 与 date input 的默认高度算法不同(iOS Safari 尤为明显),
+   同一行并排时会差几像素。统一定高与内边距,保证严格对齐。 */
+.gl-field {
+  width: 100%;
+  height: 50px;
+  padding: 0 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.75rem;
+  background: var(--page);
+  color: var(--ink-1);
+  font-family: inherit;
+  font-size: 16px; /* 低于 16px 会触发 iOS 聚焦时自动放大页面 */
+  color-scheme: dark;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.gl-field:focus {
+  border-color: rgba(57, 135, 229, 0.6);
+}
+
+/* iOS Safari 中 date 的值默认贴顶,且日历图标对比度过低 */
+input[type="date"].gl-field::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+input[type="date"].gl-field::-webkit-calendar-picker-indicator {
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+input[type="date"].gl-field::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+}
+
+/* 横向滚动区:隐藏滚动条但保留惯性滚动与吸附 */
+.scroll-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
 /* ─── 极光背景 ─── */
 @keyframes aurora-drift {
   0%, 100% { transform: translate(0, 0) scale(1); }

@@ -56,8 +56,9 @@ function CardActions({ url, onAsk }: { url: string; onAsk: () => void }) {
 /* 实时抓取的官方法规卡片 */
 function LiveCard({ item, onAsk }: { item: LiveNewsItem; onAsk: (title: string) => void }) {
   const { lang, t } = useI18n();
+  /* 窄屏留出下一张卡片的边缘,让「可横滑」一眼可见 */
   return (
-    <article className="flex w-[360px] shrink-0 flex-col rounded-2xl border border-hairline bg-surface p-5 transition-colors hover:bg-surface-2">
+    <article className="flex w-[82vw] max-w-[360px] shrink-0 flex-col rounded-2xl border border-hairline bg-surface p-5 transition-colors hover:bg-surface-2 md:w-[360px] md:max-w-none">
       <div className="flex items-center gap-2">
         <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${tagStyle(item.typeLabel)}`}>
           {t.news.typeLabels[item.typeLabel] ?? item.typeLabel}
@@ -81,8 +82,9 @@ function LiveCard({ item, onAsk }: { item: LiveNewsItem; onAsk: (title: string) 
 function CuratedCard({ item, onAsk }: { item: NewsItem; onAsk: (title: string) => void }) {
   const { lang, t } = useI18n();
   const title = lang === "zh" ? item.title : item.titleEn;
+  /* 窄屏留出下一张卡片的边缘,让「可横滑」一眼可见 */
   return (
-    <article className="flex w-[360px] shrink-0 flex-col rounded-2xl border border-hairline bg-surface p-5 transition-colors hover:bg-surface-2">
+    <article className="flex w-[82vw] max-w-[360px] shrink-0 flex-col rounded-2xl border border-hairline bg-surface p-5 transition-colors hover:bg-surface-2 md:w-[360px] md:max-w-none">
       <div className="flex items-center gap-2">
         <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${tagStyle(item.tag)}`}>
           {t.news.tags[item.tag] ?? item.tag}
@@ -193,7 +195,7 @@ export default function NewsCarousel({
       </div>
 
       {/* 移动端/平板竖屏:横向滑动,触屏友好 */}
-      <div className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 md:hidden">
+      <div className="scroll-row mt-10 flex snap-x snap-mandatory gap-4 px-5 pb-2 md:hidden">
         {merged.map((entry, i) =>
           entry.kind === "live" ? (
             <div key={`m-live-${entry.item.id}-${i}`} className="snap-start">

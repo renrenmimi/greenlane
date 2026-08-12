@@ -111,3 +111,13 @@ export function forecastNextBulletin(
 
   return { nextBulletin, days, peak, daysToPeak, status };
 }
+
+/** 优先日可选下限:排期公告的最早截止日远晚于此,再往前没有实际意义 */
+export const MIN_PRIORITY_DATE = "1990-01-01";
+
+/** 本地时区的 YYYY-MM-DD。toISOString 按 UTC 输出,跨时区会差一天 */
+export function toIsoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}

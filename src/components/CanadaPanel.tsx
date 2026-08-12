@@ -124,7 +124,7 @@ export default function CanadaPanel({ data }: { data: CanadaData }) {
             <button
               key={g.code}
               onClick={() => setGroup(g.code)}
-              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-full border px-3.5 py-2 text-sm font-medium transition-colors sm:px-4 sm:py-1.5 ${
                 group === g.code
                   ? "border-series-a/60 bg-series-a/15 text-ink-1"
                   : "border-hairline bg-surface text-ink-3 hover:text-ink-2"
@@ -135,10 +135,10 @@ export default function CanadaPanel({ data }: { data: CanadaData }) {
           ))}
         </div>
 
-        <div className="mt-5 rounded-2xl border border-hairline bg-surface p-5">
+        <div className="mt-5 rounded-2xl border border-hairline bg-surface p-4 sm:p-5">
           {chartData.length >= 2 ? (
             <>
-              <div className="mb-3 flex items-center justify-between text-sm">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
                 <span className="text-ink-2">{t.canada.chartNote(chartData.length)}</span>
                 {crsDelta != null && (
                   <span
@@ -154,7 +154,7 @@ export default function CanadaPanel({ data }: { data: CanadaData }) {
                   </span>
                 )}
               </div>
-              <div className="h-[320px]">
+              <div className="h-[260px] sm:h-[320px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={chartData}
@@ -203,9 +203,13 @@ export default function CanadaPanel({ data }: { data: CanadaData }) {
       </div>
 
       {/* 近期抽签记录 */}
-      <div className="mt-10 rounded-2xl border border-hairline bg-surface p-5">
-        <h3 className="text-xl font-bold">{t.canada.recentTitle}</h3>
-        <div className="mt-4 overflow-x-auto">
+      <div className="mt-10 rounded-2xl border border-hairline bg-surface p-4 sm:p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h3 className="text-xl font-bold">{t.canada.recentTitle}</h3>
+          {/* 表格在窄屏需横滑,给出明确提示 */}
+          <span className="text-xs text-ink-3 sm:hidden">{t.canada.scrollHint}</span>
+        </div>
+        <div className="scroll-row mt-4">
           <table className="w-full min-w-[560px] text-left text-sm [font-variant-numeric:tabular-nums]">
             <thead>
               <tr className="text-xs text-ink-3">
