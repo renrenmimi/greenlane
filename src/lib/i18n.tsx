@@ -219,6 +219,9 @@ const zh = {
   subscribe: {
     title: "排期更新,第一时间通知您",
     desc: "官方公告发布后,将您关注队伍的前进、倒退与状态变化直接发送至您的邮箱。免费,可随时退订。",
+    soonBadge: "即将开放",
+    soonBody:
+      "邮件提醒功能正在接入中。在此之前,本站排期数据每日自动核对更新,随时回访即可查看最新进度。",
     familyCat: "亲属移民",
     emailPlaceholder: "you@example.com",
     submit: "免费订阅",
@@ -459,6 +462,9 @@ const en: Dict = {
   subscribe: {
     title: "Be First to Know When the Line Moves",
     desc: "When each bulletin drops, we'll email you your queue's movement — advances, retrogressions and status changes. Free, unsubscribe anytime.",
+    soonBadge: "Coming soon",
+    soonBody:
+      "Email alerts are being wired up. In the meantime, every queue on this site is checked and updated automatically each day — just check back anytime.",
     familyCat: "Family-based",
     emailPlaceholder: "you@example.com",
     submit: "Subscribe free",
