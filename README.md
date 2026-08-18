@@ -10,6 +10,10 @@ wired up.
 
 Every figure comes from an official source. **This is not legal advice.**
 
+![The dashboard — current cutoff dates and ten years of movement](docs/screenshot.jpg)
+
+*The dashboard — current cutoff dates and ten years of movement*
+
 ## Quick start
 
 ```bash
