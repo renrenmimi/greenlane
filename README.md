@@ -47,8 +47,7 @@ that script locally.
 | `src/lib/bulletin.ts` | US timeline maths — advances and retrogressions, trend series, average pace, wait estimates |
 | `src/lib/canada.ts` | Canadian draw categories and helpers |
 
-Built with Next.js 15 and TypeScript; server-rendered so the numbers are fresh on first
-paint.
+Built with Next.js 15 and TypeScript, server-rendered.
 
 ---
 
