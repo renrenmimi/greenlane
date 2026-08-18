@@ -23,7 +23,7 @@ npm run dev        # http://localhost:3000
 
 ## Data pipelines
 
-Three of them, all running on free infrastructure:
+Three of them:
 
 ```bash
 python3 scripts/scrape_bulletins.py   # US visa bulletins (incremental; --full re-fetches from 2015-10)
