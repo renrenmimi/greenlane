@@ -1,5 +1,9 @@
 # 每日自动更新数据:美国排期公告 + 联邦公报法规动态 + 加拿大 EE 抽签
 # cron 为 UTC 时间:10:00 UTC = 美东夏令时 06:00(冬令时 05:00)
+#
+# 抓完不直接提交。抓取脚本失败的方式不止「报错退出」一种 —— 源站改版会让解析器
+# 安静地返回空列表,网络中断会让它只拿到一半。所以先过一道数据校验,再用这份数据
+# 真的构建一次生产站点,两关都过了才提交。任何一关不过,已有数据保持原样。
 name: daily-data-update
 
 on:
@@ -13,8 +17,16 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
 
       - name: 抓取美国排期公告(增量)
         run: python3 scripts/scrape_bulletins.py
@@ -26,6 +38,14 @@ jobs:
       # 数据中心 IP,失败时不阻塞其余数据更新
       - name: 抓取加拿大 EE 抽签数据
         run: python3 scripts/fetch_canada.py || echo "::warning::加拿大源抓取失败(可能为 IP 拦截),保留现有数据"
+
+      # 结构、日期、非空,以及跟上一版比条数有没有倒退。
+      - name: 校验抓到的数据
+        run: node scripts/validate_data.mjs
+
+      # 数据能过校验,不等于站点构建得出来。这一步用新数据真跑一次生产构建。
+      - name: 用新数据构建生产站点
+        run: npm run build
 
       - name: 提交数据变更
         run: |
