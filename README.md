@@ -4,9 +4,9 @@
 
 A dashboard for immigration backlogs. US green card categories (EB-1 through EB-5, NIW and
 family-based) sit alongside Canada's Express Entry draws, with ten years of history, wait
-estimates per category, official regulatory news, and email alerts when a cutoff date
-moves. Panels for the UK, Australia and New Zealand are built; their data sources are being
-wired up.
+estimates per category and official regulatory news. Email alerts for when a cutoff date
+moves are coming soon — the panel is in place, but no address is collected yet. Panels for
+the UK, Australia and New Zealand are built; their data sources are being wired up.
 
 Every figure comes from an official source. **This is not legal advice.**
 
