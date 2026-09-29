@@ -26,16 +26,32 @@ npm run dev        # http://localhost:3000
 Three of them:
 
 ```bash
-python3 scripts/scrape_bulletins.py   # US visa bulletins (incremental; --full re-fetches from 2015-10)
+python3 -m pip install -r scripts/requirements.txt
+python3 scripts/scrape_bulletins.py   # US bulletins: backfill + recheck current/latest; --full rechecks all
 python3 scripts/fetch_canada.py       # Canada Express Entry draws (headless Chrome, works around Akamai)
 python3 scripts/fetch_news.py         # US Federal Register immigration rules (official free API)
 ```
 
-Output lands in `src/data/`: `bulletins.json` (130 US bulletins), `canada.json` (424 draws),
+Output lands in `src/data/`: `bulletins.json` (133 US bulletins through October 2026), `canada.json`,
 `live-news.json` (10 regulatory updates).
 
-**Automatic updates:** `.github/workflows/update-data.yml` runs daily at 10:00 UTC, fetches
-everything and commits any changes. Free on public repositories. One caveat — IRCC's Akamai
+**Automatic updates:** `.github/workflows/update-data.yml` runs at 04:17, 10:17, 16:17 and
+22:17 UTC, fetches everything and commits validated changes. GitHub may delay scheduled runs.
+The US pipeline discovers published months from the official directory and rechecks the
+current/latest bulletin for revisions. HTTP failures fall back to a separate Chrome session
+using Playwright; install Google Chrome locally, or use the Chrome bundled on GitHub's runner.
+Actions uses `xvfb-run` with `--headed` to allow the page to finish loading.
+If the official site still blocks access, or a published table is incomplete, the job fails
+and preserves the previous data **and its last-successful-check date**. A failed request is
+never treated as evidence that no bulletin was published. The validator also rejects a latest
+bulletin older than the current month.
+
+Run regression checks with `python3 -m unittest discover -s scripts/tests -v` and
+`node scripts/validate_data.mjs`. The August–October 2026 fixtures contain normalized official
+table text retrieved on September 29, 2026; they document the one-time backfill and exercise
+the parser. Scheduled updates never use these snapshots as a live-data fallback.
+
+One caveat — IRCC's Akamai
 protection sometimes blocks data-centre IPs, so if the Canadian job fails on Actions, run
 that script locally.
 

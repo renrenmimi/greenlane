@@ -99,6 +99,7 @@ function checkNoShrink(name, listKey, list) {
     const newest = list.reduce((a, b) => (b.year * 12 + b.month > a.year * 12 + a.month ? b : a));
     const newestKey = `${newest.year}-${String(newest.month).padStart(2, "0")}`;
     note(`bulletins.json: 最新一期 ${newestKey}`);
+    if (newestKey < TODAY.slice(0, 7)) fail(`bulletins.json: 最新一期 ${newestKey} 早于本月，排期数据已过期`);
     if (newest.year > thisYear + 1) fail(`bulletins.json: 最新一期 ${newestKey} 在未来太远`);
   }
 }

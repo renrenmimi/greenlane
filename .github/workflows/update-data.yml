@@ -1,5 +1,5 @@
 # 每日自动更新数据:美国排期公告 + 联邦公报法规动态 + 加拿大 EE 抽签
-# cron 为 UTC 时间:10:00 UTC = 美东夏令时 06:00(冬令时 05:00)
+# 每 6 小时核对，避开整点拥堵；所有 cron 时间均为 UTC。
 #
 # 抓完不直接提交。抓取脚本失败的方式不止「报错退出」一种 —— 源站改版会让解析器
 # 安静地返回空列表,网络中断会让它只拿到一半。所以先过一道数据校验,再用这份数据
@@ -8,11 +8,15 @@ name: daily-data-update
 
 on:
   schedule:
-    - cron: "0 10 * * *"
+    - cron: "17 4,10,16,22 * * *"
   workflow_dispatch: {}
 
 permissions:
   contents: write
+
+concurrency:
+  group: data-update
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -28,8 +32,17 @@ jobs:
 
       - run: npm ci
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r scripts/requirements.txt
+
+      - name: 排期抓取回归测试
+        run: python3 -m unittest discover -s scripts/tests -v
+
       - name: 抓取美国排期公告(增量)
-        run: python3 scripts/scrape_bulletins.py
+        run: xvfb-run -a python3 scripts/scrape_bulletins.py --headed
 
       - name: 抓取联邦公报法规动态
         run: python3 scripts/fetch_news.py

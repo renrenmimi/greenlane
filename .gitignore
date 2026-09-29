@@ -42,3 +42,8 @@ next-env.d.ts
 
 # 订阅者邮箱数据(隐私,不入库)
 /data/subscribers.json
+
+# Python ingestion scripts
+__pycache__/
+*.pyc
+.venv/
