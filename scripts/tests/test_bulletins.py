@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -120,6 +121,49 @@ class BulletinTests(unittest.TestCase):
         self.assertIn("/2027/", good)
         index = f'<a href="{good}">October</a><a href="https://example.com/visa-bulletin-for-november-2026.html">Other</a>'
         self.assertEqual(scraper.discover_bulletins(index), {(2026, 10): good})
+
+    def test_alternate_official_directory_links_are_canonicalized(self):
+        canonical = scraper.bulletin_url(2026, 10)
+        alternate = canonical.replace("travel.state.gov", "adoption.state.gov")
+        self.assertEqual(scraper.discover_bulletins(f'<a href="{alternate}">October</a>'),
+                         {(2026, 10): canonical})
+
+    def test_403_falls_back_to_official_host_and_reuses_it(self):
+        url = scraper.bulletin_url(2026, 10)
+        alternate = url.replace("travel.state.gov", "adoption.state.gov")
+        failed = SimpleNamespace(returncode=22, stdout="blocked\n" + url, stderr="HTTP 403")
+        good = SimpleNamespace(returncode=0, stdout=self.pages[url] + "\n" + alternate, stderr="")
+        with patch.object(scraper.subprocess, "run", side_effect=[failed, good, good]) as run, \
+             contextlib.redirect_stderr(io.StringIO()):
+            fetcher = scraper.Fetcher()
+            self.assertEqual(fetcher(url), self.pages[url])
+            self.assertEqual(fetcher(url), self.pages[url])
+        self.assertEqual([call.args[0][-1] for call in run.call_args_list], [url, alternate, alternate])
+
+    def test_both_hosts_blocked_raises_instead_of_returning_cached_data(self):
+        url = scraper.bulletin_url(2026, 10)
+        failed = SimpleNamespace(returncode=22, stdout="blocked\n" + url, stderr="HTTP 403")
+        with patch.object(scraper.subprocess, "run", return_value=failed) as run, \
+             contextlib.redirect_stderr(io.StringIO()), \
+             self.assertRaises(scraper.FetchError):
+            scraper.Fetcher()(url)
+        self.assertEqual(run.call_count, 2)
+
+    def test_redirect_to_nonofficial_host_is_rejected(self):
+        url = scraper.bulletin_url(2026, 10)
+        response = SimpleNamespace(returncode=0, stdout=self.pages[url] + "\nhttps://example.com", stderr="")
+        with patch.object(scraper.subprocess, "run", return_value=response), \
+             contextlib.redirect_stderr(io.StringIO()), \
+             self.assertRaises(scraper.FetchError):
+            scraper.Fetcher()(url)
+
+    def test_http_200_challenge_falls_back(self):
+        url = scraper.bulletin_url(2026, 10)
+        challenge = SimpleNamespace(returncode=0, stdout="<title>Just a moment...</title>\n" + url, stderr="")
+        good = SimpleNamespace(returncode=0, stdout=self.pages[url] + "\n" + url, stderr="")
+        with patch.object(scraper.subprocess, "run", side_effect=[challenge, good]), \
+             contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(scraper.Fetcher()(url), self.pages[url])
 
     def test_cli_reports_failure_with_nonzero_exit(self):
         with patch.object(sys, "argv", ["scrape_bulletins.py"]), \

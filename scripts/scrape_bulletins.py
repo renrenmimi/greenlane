@@ -21,6 +21,9 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 BASE = "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin"
+# Both public State Department hosts serve the same bulletin content tree.
+# The alternate host is also indexed publicly (including its bulletin PDFs).
+OFFICIAL_HOSTS = ("travel.state.gov", "adoption.state.gov")
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 OUT = Path(__file__).resolve().parent.parent / "src" / "data" / "bulletins.json"
 
@@ -82,55 +85,47 @@ class FetchError(RuntimeError):
 
 
 class Fetcher:
-    """优先 HTTP；被拦时复用独立浏览器会话，等待真正的公告内容。"""
+    """只读国务院公开 HTTPS 入口；主站不可用时使用官方备用站点。"""
 
-    def __init__(self, headed=False):
-        self.headed = headed
-        self.runtime = self.browser = self.page = None
-
-    def close(self):
-        if self.browser:
-            self.browser.close()
-        if self.runtime:
-            self.runtime.stop()
+    def __init__(self):
+        self.preferred_host = OFFICIAL_HOSTS[0]
 
     def __call__(self, url):
-        selector = ('a[href*="visa-bulletin-for-"]'
-                    if url == BASE + ".html" else "table")
-        try:
-            r = subprocess.run(
-                ["curl", "-sS", "-L", "--fail-with-body", "--retry", "2",
-                 "--max-time", "30", "-A", UA, url],
-                capture_output=True, text=True, timeout=100,
-            )
-            if r.returncode == 0 and self.has_content(r.stdout, url):
-                return r.stdout
-            print(f"HTTP 抓取未成功: {url}: {r.stderr.strip() or '响应没有公告内容'}",
-                  file=sys.stderr)
-        except (OSError, subprocess.TimeoutExpired) as e:
-            print(f"HTTP 抓取失败: {url}: {e}", file=sys.stderr)
-        try:
-            if self.page is None:
-                from playwright.sync_api import sync_playwright
-                self.runtime = sync_playwright().start()
-                self.browser = self.runtime.chromium.launch(
-                    channel="chrome", headless=not self.headed,
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.netloc not in OFFICIAL_HOSTS:
+            raise FetchError(f"不是允许的国务院 HTTPS 来源: {url}")
+        hosts = [self.preferred_host] + [h for h in OFFICIAL_HOSTS if h != self.preferred_host]
+        failures = []
+        for host in hosts:
+            source_url = parsed._replace(netloc=host).geturl()
+            try:
+                r = subprocess.run(
+                    ["curl", "-sS", "-L", "--fail-with-body", "--retry", "2",
+                     "--proto", "=https", "--proto-redir", "=https",
+                     "--connect-timeout", "10", "--max-time", "30", "-A", UA,
+                     "--write-out", "\n%{url_effective}", source_url],
+                    capture_output=True, text=True, timeout=100,
                 )
-                self.page = self.browser.new_page()
-            self.page.goto(url, wait_until="domcontentloaded", timeout=45000)
-            self.page.locator(selector).first.wait_for(state="attached", timeout=45000)
-            src = self.page.content()
-            if not self.has_content(src, url):
-                raise FetchError("浏览器响应没有公告内容")
-            return src
-        except Exception as e:
-            raise FetchError(f"{url}: 浏览器抓取失败: {e}") from e
+                body, _, effective_url = r.stdout.rpartition("\n")
+                effective = urlparse(effective_url)
+                if (r.returncode == 0 and effective.scheme == "https"
+                        and effective.netloc in OFFICIAL_HOSTS and self.has_content(body, url)):
+                    self.preferred_host = host
+                    print(f"  官方来源: {effective_url}")
+                    return body
+                detail = r.stderr.strip() or "响应不是有效的官方公告内容"
+            except (OSError, subprocess.TimeoutExpired) as e:
+                detail = str(e)
+            failures.append(f"{source_url}: {detail}")
+            print(f"HTTP 抓取未成功: {failures[-1]}", file=sys.stderr)
+        raise FetchError("全部官方入口均抓取失败: " + "; ".join(failures))
 
     @staticmethod
     def has_content(src, url):
         if re.search(r"Attention Required!|Just a moment\.\.\.|Sorry, you have been blocked", src, re.I):
             return False
-        return bool(discover_bulletins(src)) if url == BASE + ".html" else bool(parse_bulletin(src))
+        return (bool(discover_bulletins(src)) if urlparse(url).path == urlparse(BASE + ".html").path
+                else bool(parse_bulletin(src)))
 
 
 def discover_bulletins(src):
@@ -138,8 +133,11 @@ def discover_bulletins(src):
     found = {}
     for href in re.findall(r'href=[\"\x27]([^\"\x27]+)', src, re.I):
         url = urljoin(BASE + ".html", html.unescape(href))
-        if urlparse(url).hostname != "travel.state.gov":
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.netloc not in OFFICIAL_HOSTS:
             continue
+        # Keep user-facing source links on the canonical main site.
+        url = parsed._replace(netloc=OFFICIAL_HOSTS[0]).geturl()
         match = re.search(r"/visa-bulletin-for-([a-z]+)-(\d{4})\.html$", url, re.I)
         if match and match[1].lower() in MONTH_NAMES:
             key = (int(match[2]), MONTH_NAMES.index(match[1].lower()) + 1)
@@ -306,16 +304,13 @@ def update(fetch, out=OUT, full=False, today=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--full", action="store_true")
-    parser.add_argument("--headed", action="store_true", help="使用有界面 Chrome；Linux 通过 xvfb-run 运行")
     args = parser.parse_args()
-    fetch = Fetcher(headed=args.headed)
+    fetch = Fetcher()
     try:
         update(fetch, full=args.full)
     except (FetchError, ValueError) as e:
         print(f"::error::美国排期更新失败，保留原数据及核对日期: {e}", file=sys.stderr)
         return 1
-    finally:
-        fetch.close()
     return 0
 
 

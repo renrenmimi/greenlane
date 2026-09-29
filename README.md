@@ -26,7 +26,6 @@ npm run dev        # http://localhost:3000
 Three of them:
 
 ```bash
-python3 -m pip install -r scripts/requirements.txt
 python3 scripts/scrape_bulletins.py   # US bulletins: backfill + recheck current/latest; --full rechecks all
 python3 scripts/fetch_canada.py       # Canada Express Entry draws (headless Chrome, works around Akamai)
 python3 scripts/fetch_news.py         # US Federal Register immigration rules (official free API)
@@ -38,16 +37,22 @@ Output lands in `src/data/`: `bulletins.json` (133 US bulletins through October 
 **Automatic updates:** `.github/workflows/update-data.yml` runs at 04:17, 10:17, 16:17 and
 22:17 UTC, fetches everything and commits validated changes. GitHub may delay scheduled runs.
 The US pipeline discovers published months from the official directory and rechecks the
-current/latest bulletin for revisions. HTTP failures fall back to a separate Chrome session
-using Playwright; install Google Chrome locally, or use the Chrome bundled on GitHub's runner.
-Actions uses `xvfb-run` with `--headed` to allow the page to finish loading.
-If the official site still blocks access, or a published table is incomplete, the job fails
+current/latest bulletin for revisions. It reads public HTTPS pages from `travel.state.gov`,
+falling back to the same bulletin content on the State Department's `adoption.state.gov`
+host when necessary. The successful official URL is logged; user-facing links remain on
+the canonical travel site. This US pipeline needs only Python's standard library and curl,
+with no browser, proxy service or API key.
+If both official hosts are unavailable, or a published table is incomplete, the job fails
 and preserves the previous data **and its last-successful-check date**. A failed request is
 never treated as evidence that no bulletin was published. The validator also rejects a latest
 bulletin older than the current month.
 
 Run regression checks with `python3 -m unittest discover -s scripts/tests -v` and
-`node scripts/validate_data.mjs`. The August–October 2026 fixtures contain normalized official
+`node scripts/validate_data.mjs`. Manual workflow runs also run
+`python3 scripts/verify_bulletin_refresh.py` after scraping: this removes the newest bulletin
+from a temporary copy, fetches it again from the live official sources, and checks that all
+four tables are recovered exactly. Production data is not modified by that smoke test.
+The August–October 2026 fixtures contain normalized official
 table text retrieved on September 29, 2026; they document the one-time backfill and exercise
 the parser. Scheduled updates never use these snapshots as a live-data fallback.
 

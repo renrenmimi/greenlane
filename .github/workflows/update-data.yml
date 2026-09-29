@@ -36,13 +36,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install -r scripts/requirements.txt
-
       - name: 排期抓取回归测试
         run: python3 -m unittest discover -s scripts/tests -v
 
       - name: 抓取美国排期公告(增量)
-        run: xvfb-run -a python3 scripts/scrape_bulletins.py --headed
+        run: python3 scripts/scrape_bulletins.py
+
+      - name: 实测从官网自动补回缺失的最新一期
+        if: github.event_name == 'workflow_dispatch'
+        run: python3 scripts/verify_bulletin_refresh.py
 
       - name: 抓取联邦公报法规动态
         run: python3 scripts/fetch_news.py

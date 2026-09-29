@@ -1,2 +1,0 @@
-# Browser fallback for public Department of State pages.
-playwright==1.63.0
