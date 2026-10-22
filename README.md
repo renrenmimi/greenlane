@@ -31,11 +31,14 @@ python3 scripts/fetch_canada.py       # Canada Express Entry draws (headless Chr
 python3 scripts/fetch_news.py         # US Federal Register immigration rules (official free API)
 ```
 
-Output lands in `src/data/`: `bulletins.json` (133 US bulletins through October 2026), `canada.json`,
+Output lands in `src/data/`: `bulletins.json` (every US bulletin since October 2015), `canada.json`,
 `live-news.json` (10 regulatory updates).
 
-**Automatic updates:** `.github/workflows/update-data.yml` runs at 04:17, 10:17, 16:17 and
-22:17 UTC, fetches everything and commits validated changes. GitHub may delay scheduled runs.
+**Automatic updates:** `.github/workflows/update-data.yml` runs every hour at :17 UTC, fetches
+everything and commits validated changes. GitHub may delay or drop individual scheduled runs.
+Each file's `updatedAt` is the exact time of its last successful check (UTC, to the second),
+and the site shows it in the visitor's local time zone. Every successful run therefore commits
+and deploys — at most 24 Vercel deployments a day, under the Hobby plan's 100 per account.
 The US pipeline discovers published months from the official directory and rechecks the
 current/latest bulletin for revisions. It reads public HTTPS pages from `travel.state.gov`,
 falling back to the same bulletin content on the State Department's `adoption.state.gov`
@@ -43,7 +46,7 @@ host when necessary. The successful official URL is logged; user-facing links re
 the canonical travel site. This US pipeline needs only Python's standard library and curl,
 with no browser, proxy service or API key.
 If both official hosts are unavailable, or a published table is incomplete, the job fails
-and preserves the previous data **and its last-successful-check date**. A failed request is
+and preserves the previous data **and its last-successful-check time**. A failed request is
 never treated as evidence that no bulletin was published. The validator also rejects a latest
 bulletin older than the current month.
 

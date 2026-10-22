@@ -88,9 +88,9 @@ export function isDate(v: CutoffValue | undefined): v is string {
   return !!v && v !== "C" && v !== "U";
 }
 
-/** ISO 日期 → "2026 年 7 月 6 日" / "Jul 6, 2026" */
+/** ISO 日期 → "2026 年 7 月 6 日" / "Jul 6, 2026"。传入带时刻的时间戳时只取日期部分 */
 export function formatDate(iso: string, lang: Lang = "zh"): string {
-  const [y, m, d] = iso.split("-").map(Number);
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return lang === "zh" ? `${y} 年 ${m} 月 ${d} 日` : `${MONTHS_EN_SHORT[m - 1]} ${d}, ${y}`;
 }
 

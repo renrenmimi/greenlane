@@ -1,7 +1,7 @@
 import contextlib
 import io
 import json
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 import sys
 import tempfile
@@ -14,6 +14,7 @@ import scrape_bulletins as scraper
 
 FIXTURES = Path(__file__).parent / "fixtures"
 TODAY = date(2026, 9, 29)
+NOW = datetime(2026, 9, 29, 18, 10, 37, tzinfo=timezone.utc)
 
 
 class BulletinTests(unittest.TestCase):
@@ -37,8 +38,8 @@ class BulletinTests(unittest.TestCase):
         self.stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
         self.stack.enter_context(patch.object(scraper.time, "sleep"))
 
-    def update(self):
-        scraper.update(self.pages.__getitem__, self.out, today=TODAY)
+    def update(self, now=NOW):
+        scraper.update(self.pages.__getitem__, self.out, today=TODAY, now=now)
 
     def assert_preserved(self):
         self.assertEqual(self.out.read_text(), self.original)
@@ -47,13 +48,18 @@ class BulletinTests(unittest.TestCase):
         self.update()
         doc = json.loads(self.out.read_text())
         self.assertEqual(len(doc["bulletins"]), 133)
-        self.assertEqual(doc["updatedAt"], "2026-09-29")
+        self.assertEqual(doc["updatedAt"], "2026-09-29T18:10:37Z")
         latest = doc["bulletins"][-1]
         self.assertEqual(latest["month"], 10)
         self.assertEqual(latest["employment"]["finalAction"]["EB2"]["CN"], "2021-10-01")
         self.assertEqual(latest["employment"]["datesForFiling"]["EB2"]["CN"], "2023-01-01")
         self.assertEqual(latest["family"]["finalAction"]["F4"]["PH"], "2008-05-15")
         self.assertEqual(doc["bulletins"][-3]["employment"]["finalAction"]["EB2"]["IN"], "U")
+
+    def test_checked_time_is_recorded_in_utc_to_the_second(self):
+        pacific = timezone(timedelta(hours=-7))
+        self.update(now=datetime(2026, 9, 29, 11, 10, 37, tzinfo=pacific))
+        self.assertEqual(json.loads(self.out.read_text())["updatedAt"], "2026-09-29T18:10:37Z")
 
     def test_network_failure_preserves_entire_file(self):
         with self.assertRaises(scraper.FetchError):

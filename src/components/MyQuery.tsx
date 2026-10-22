@@ -32,6 +32,7 @@ import {
 import { formatDate, monthLabel } from "@/lib/bulletin";
 import { useI18n } from "@/lib/i18n";
 import { useNow } from "@/lib/useNow";
+import CheckedTime from "@/components/CheckedTime";
 
 const DAY = 86_400_000;
 
@@ -164,7 +165,10 @@ export default function MyQuery({
                 <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-good" />
                 {t.forecast.showing(monthLabel(latest, lang))}
               </span>
-              <span className="text-ink-3">{t.forecast.checked(formatDate(updatedAt, lang))}</span>
+              <span className="text-ink-3">
+                {t.forecast.checked}
+                <CheckedTime iso={updatedAt} />
+              </span>
             </div>
             {forecast && (
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-hairline pt-2">

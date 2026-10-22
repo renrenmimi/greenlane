@@ -13,7 +13,7 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 
 URL = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
@@ -116,8 +116,10 @@ def main():
 
     rounds.sort(key=lambda x: (x["date"], x["num"] or 0))
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    # 核对时刻精确到秒、统一记 UTC;网页再按访客所在时区显示。
+    checked_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     OUT.write_text(json.dumps(
-        {"updatedAt": date.today().isoformat(), "source": URL, "rounds": rounds},
+        {"updatedAt": checked_at, "source": URL, "rounds": rounds},
         ensure_ascii=False,
     ))
     latest = rounds[-1]

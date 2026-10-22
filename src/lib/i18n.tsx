@@ -42,7 +42,7 @@ const zh = {
   },
   forecast: {
     showing: (m: string) => `当前展示:${m}排期`,
-    checked: (d: string) => `数据每日核对 · 最近 ${d}`,
+    checked: "数据自动核对 · 最近 ",
     eta: (nm: string, date: string, days: number) =>
       `下一期(${nm}排期)预计 ${date} 前后发布 · 约 ${days} 天后`,
     etaImminent: (nm: string) => `下一期(${nm}排期)预计就在这一两天发布,请留意`,
@@ -88,7 +88,7 @@ const zh = {
     tag: "Visa Bulletin",
     title: (month: string) => `美国绿卡排期 · ${month}`,
     official: "查看官方原文 ↗",
-    checked: (date: string) => `数据核对于 ${date}`,
+    checked: "数据核对于 ",
     tableA: "表 A 最终裁定",
     tableB: "表 B 可递交",
     selected: "✓ 已选中",
@@ -127,7 +127,7 @@ const zh = {
     tag: "Express Entry",
     title: "加拿大 · Express Entry 抽签动态",
     official: "查看官方原始数据 ↗",
-    checked: (date: string) => `数据核对于 ${date}`,
+    checked: "数据核对于 ",
     latestDraw: "最新一轮抽签",
     drawNum: (n: number | null) => (n != null ? `第 ${n} 轮` : "—"),
     drawCat: "抽签类别",
@@ -192,7 +192,7 @@ const zh = {
   news: {
     tag: "Immigration News",
     title: "移民资讯",
-    updatedBadge: (date: string) => `每日自动更新 · 最近核对:${date}`,
+    updatedBadge: "自动更新 · 最近核对:",
     desc: "官方法规动态实时取自美国联邦公报(Federal Register);专题解读为中文整理,附官方来源。",
     liveBadge: "联邦公报 · 英文",
     curatedBadge: "专题解读",
@@ -286,7 +286,7 @@ const en: Dict = {
   },
   forecast: {
     showing: (m) => `Now showing: ${m} bulletin`,
-    checked: (d) => `Verified daily · last ${d}`,
+    checked: "Auto-verified · last ",
     eta: (nm, date, days) =>
       `Next bulletin (${nm}) expected around ${date} · in ~${days} days`,
     etaImminent: (nm) => `Next bulletin (${nm}) expected any day now — stay tuned`,
@@ -332,7 +332,7 @@ const en: Dict = {
     tag: "Visa Bulletin",
     title: (month) => `U.S. Green Card Queues · ${month}`,
     official: "View official bulletin ↗",
-    checked: (date) => `Verified ${date}`,
+    checked: "Verified ",
     tableA: "Table A · Final Action",
     tableB: "Table B · Filing",
     selected: "✓ Selected",
@@ -371,7 +371,7 @@ const en: Dict = {
     tag: "Express Entry",
     title: "Canada · Express Entry Draws",
     official: "View official data ↗",
-    checked: (date) => `Verified ${date}`,
+    checked: "Verified ",
     latestDraw: "Latest draw",
     drawNum: (n) => (n != null ? `Draw #${n}` : "—"),
     drawCat: "Draw category",
@@ -436,7 +436,7 @@ const en: Dict = {
   news: {
     tag: "Immigration News",
     title: "Immigration News",
-    updatedBadge: (date) => `Auto-updated daily · verified ${date}`,
+    updatedBadge: "Auto-updated · verified ",
     desc: "Regulatory updates are pulled live from the U.S. Federal Register; analysis pieces are editorial summaries with official sources attached.",
     liveBadge: "Federal Register",
     curatedBadge: "Analysis",

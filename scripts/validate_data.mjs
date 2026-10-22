@@ -23,6 +23,11 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 const isISODate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
 
+/** 核对时刻:精确到秒的 UTC 时间戳。某个源连续抓取失败时会保留旧的纯日期,两种都认。 */
+const isCheckedAt = (v) =>
+  isISODate(v) ||
+  (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(v) && !Number.isNaN(Date.parse(v)));
+
 function readJSON(name) {
   try {
     return JSON.parse(readFileSync(`${DATA}/${name}`, "utf8"));
@@ -44,8 +49,12 @@ function previous(name) {
 /** 三个文件共有的外壳。 */
 function checkEnvelope(name, doc, listKey) {
   if (!doc) return null;
-  if (!isISODate(doc.updatedAt)) fail(`${name}: updatedAt 不是 YYYY-MM-DD — ${JSON.stringify(doc.updatedAt)}`);
-  else if (doc.updatedAt > TODAY) fail(`${name}: updatedAt 是未来日期 ${doc.updatedAt}(今天 ${TODAY})`);
+  if (!isCheckedAt(doc.updatedAt)) {
+    fail(`${name}: updatedAt 不是 YYYY-MM-DD 或 YYYY-MM-DDTHH:MM:SSZ — ${JSON.stringify(doc.updatedAt)}`);
+  // 不能按字符串比:"2026-10-22T…" 永远大于 "2026-10-22"。换成毫秒,留 5 分钟给 runner 时钟误差。
+  } else if (Date.parse(doc.updatedAt) > Date.now() + 5 * 60_000) {
+    fail(`${name}: updatedAt 是未来时间 ${doc.updatedAt}(现在 ${new Date().toISOString()})`);
+  }
 
   if (typeof doc.source !== "string" || !/^https?:\/\//.test(doc.source)) {
     fail(`${name}: source 不是一个 URL — ${JSON.stringify(doc.source)}`);

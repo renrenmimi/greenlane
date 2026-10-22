@@ -10,7 +10,7 @@
 import json
 import subprocess
 import sys
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -70,8 +70,10 @@ def main():
 
     items = sorted(seen.values(), key=lambda x: x["date"], reverse=True)[:10]
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    # 核对时刻精确到秒、统一记 UTC;网页再按访客所在时区显示。
+    checked_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     OUT.write_text(json.dumps(
-        {"updatedAt": date.today().isoformat(),
+        {"updatedAt": checked_at,
          "source": "https://www.federalregister.gov", "items": items},
         ensure_ascii=False,
     ))

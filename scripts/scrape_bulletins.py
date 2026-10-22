@@ -16,7 +16,7 @@ import re
 import subprocess
 import sys
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
@@ -249,8 +249,10 @@ def validate_bulletin(parsed):
                             raise ValueError(f"{kind}.{table}.{category}.{country} 缺失或日期无效")
 
 
-def update(fetch, out=OUT, full=False, today=None):
-    today = today or date.today()
+def update(fetch, out=OUT, full=False, today=None, now=None):
+    # 核对时刻精确到秒、统一记 UTC;网页再按访客所在时区显示。
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    today = today or now.date()
     existing = {}
     if out.exists():
         existing = {(b["year"], b["month"]): b
@@ -294,7 +296,7 @@ def update(fetch, out=OUT, full=False, today=None):
     out.parent.mkdir(parents=True, exist_ok=True)
     temp = out.with_suffix(".json.tmp")
     temp.write_text(json.dumps(
-        {"updatedAt": today.isoformat(), "source": BASE, "bulletins": items},
+        {"updatedAt": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "source": BASE, "bulletins": items},
         ensure_ascii=False,
     ))
     temp.replace(out)

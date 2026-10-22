@@ -23,7 +23,6 @@ import {
   categoryName,
   estimateWaitMonths,
   formatCutoff,
-  formatDate,
   getCutoff,
   monthLabel,
   queueLabel,
@@ -34,6 +33,7 @@ import { MIN_PRIORITY_DATE, toIsoDate } from "@/lib/schedule";
 import { useI18n } from "@/lib/i18n";
 import { useNow } from "@/lib/useNow";
 import CanadaPanel from "@/components/CanadaPanel";
+import CheckedTime from "@/components/CheckedTime";
 import CountryPlaceholder from "@/components/CountryPlaceholder";
 import { MovementBadge } from "@/components/MyQuery";
 
@@ -151,7 +151,10 @@ function USPanel({ bulletins, updatedAt }: { bulletins: Bulletin[]; updatedAt: s
             >
               {t.us.official}
             </a>
-            <span className="text-xs text-ink-3">{t.us.checked(formatDate(updatedAt, lang))}</span>
+            <span className="text-xs text-ink-3">
+              {t.us.checked}
+              <CheckedTime iso={updatedAt} />
+            </span>
           </div>
         </div>
 

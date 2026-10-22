@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { NEWS, NewsItem } from "@/data/news";
-import { formatDate } from "@/lib/bulletin";
 import { useI18n } from "@/lib/i18n";
+import CheckedTime from "@/components/CheckedTime";
 
 export interface LiveNewsItem {
   id: string;
@@ -167,7 +167,7 @@ export default function NewsCarousel({
   liveNews: LiveNewsItem[];
   updatedAt: string;
 }) {
-  const { lang, t } = useI18n();
+  const { t } = useI18n();
   const [activeTitle, setActiveTitle] = useState<string | null>(null);
 
   /* 官方法规与专题解读交替排列,再整体复制一份用于无缝轮转 */
@@ -188,7 +188,8 @@ export default function NewsCarousel({
         <div className="flex flex-wrap items-end gap-3">
           <h2 className="text-3xl font-black tracking-tight md:text-4xl">{t.news.title}</h2>
           <span className="mb-1.5 rounded-md border border-hairline px-2 py-0.5 text-xs text-ink-3">
-            {t.news.updatedBadge(formatDate(updatedAt, lang))}
+            {t.news.updatedBadge}
+            <CheckedTime iso={updatedAt} />
           </span>
         </div>
         <p className="mt-3 max-w-2xl text-ink-2">{t.news.desc}</p>
