@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { CA_GROUPS, CanadaData, formatCaDate, groupLabel, latestByGroup } from "@/lib/canada";
 import { useI18n } from "@/lib/i18n";
-import CheckedTime from "@/components/CheckedTime";
+import LocalTime from "@/components/LocalTime";
 
 const SERIES = "#3987e5";
 
@@ -86,8 +86,8 @@ export default function CanadaPanel({ data }: { data: CanadaData }) {
             {t.canada.official}
           </a>
           <span className="text-xs text-ink-3">
-            {t.canada.checked}
-            <CheckedTime iso={data.updatedAt} />
+            {t.canada.updated}
+            <LocalTime iso={data.updatedAt} />
           </span>
         </div>
       </div>

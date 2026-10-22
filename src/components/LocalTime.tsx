@@ -5,7 +5,7 @@ import { Lang, formatDate } from "@/lib/bulletin";
 import { useI18n } from "@/lib/i18n";
 
 /*
- * 数据核对时刻,按访客所在时区显示,精确到秒。
+ * 把 UTC 时间戳(如数据更新时刻)按访客所在时区显示,精确到秒。
  *
  * 页面在构建期静态生成,服务端不知道访客在哪个时区。照 Next 文档
  * preventing-flash-before-hydration 的做法:服务端先输出标注「UTC」的时间,
@@ -46,7 +46,7 @@ function localizeScript(id: string, iso: string, lang: Lang): string {
   );
 }
 
-export default function CheckedTime({ iso }: { iso: string }) {
+export default function LocalTime({ iso }: { iso: string }) {
   const { lang } = useI18n();
   const id = useId();
 

@@ -2,9 +2,9 @@
 # 每小时第 17 分核对一次,避开整点拥堵;所有 cron 时间均为 UTC。
 # GitHub 高峰期会推迟甚至丢弃个别定时运行,下一小时会补上。
 #
-# 每次核对都把精确到秒的核对时刻写进数据并提交,网页据此显示「最近核对」。
-# 所以每次成功运行都会触发一次 Vercel 部署,一天至多 24 次;Vercel 免费版的上限是
-# 全账号每天 100 次,超出只会暂停部署到次日,不会产生费用。
+# 只有数据内容真的变了才提交。抓取脚本每次都会把 updatedAt 刷成当前时刻(精确到秒、
+# UTC),只是刷新了时间的文件在提交前还原,所以 Vercel 只在有新数据时才部署,
+# 网页上的「数据更新于」就是最近一次抓到新数据的时间。
 #
 # 抓完不直接提交。抓取脚本失败的方式不止「报错退出」一种 —— 源站改版会让解析器
 # 安静地返回空列表,网络中断会让它只拿到一半。所以先过一道数据校验,再用这份数据
@@ -71,6 +71,10 @@ jobs:
       - name: 用新数据构建生产站点
         run: npm run build
 
+      # 只刷新了 updatedAt、数据本身没变的文件还原成上一版:不提交,也就不触发部署。
+      - name: 只保留真正有变化的数据
+        run: node scripts/keep_changed_only.mjs
+
       - name: 提交数据变更
         run: |
           git config user.name "greenlane-bot"
@@ -79,7 +83,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "数据无变化,跳过提交"
           else
-            git commit -m "chore: 数据核对 $(date -u '+%F %H:%M') UTC"
+            CHANGED=$(git diff --cached --name-only | xargs -n1 basename | sed 's/\.json$//' | paste -sd, -)
+            git commit -m "chore: 数据更新 ${CHANGED} · $(date -u '+%F %H:%M') UTC"
             # 运行期间如果有人推送了代码,先变基到最新再推
             git pull --rebase origin main
             git push

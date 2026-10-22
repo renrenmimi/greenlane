@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { NEWS, NewsItem } from "@/data/news";
 import { useI18n } from "@/lib/i18n";
-import CheckedTime from "@/components/CheckedTime";
+import LocalTime from "@/components/LocalTime";
 
 export interface LiveNewsItem {
   id: string;
@@ -189,7 +189,7 @@ export default function NewsCarousel({
           <h2 className="text-3xl font-black tracking-tight md:text-4xl">{t.news.title}</h2>
           <span className="mb-1.5 rounded-md border border-hairline px-2 py-0.5 text-xs text-ink-3">
             {t.news.updatedBadge}
-            <CheckedTime iso={updatedAt} />
+            <LocalTime iso={updatedAt} />
           </span>
         </div>
         <p className="mt-3 max-w-2xl text-ink-2">{t.news.desc}</p>
