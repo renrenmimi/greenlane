@@ -13,9 +13,12 @@ import { execSync } from "node:child_process";
 
 const DATA = "src/data";
 const problems = [];
+const warnings = [];
 const notes = [];
 
 const fail = (msg) => problems.push(msg);
+/** 需要人处理、但不该挡住其他数据提交的情况。在 Actions 页面显示为黄色警告。 */
+const warn = (msg) => warnings.push(msg);
 const note = (msg) => notes.push(msg);
 
 /** 今天(UTC)。数据里的任何日期都不该超过它。 */
@@ -108,7 +111,9 @@ function checkNoShrink(name, listKey, list) {
     const newest = list.reduce((a, b) => (b.year * 12 + b.month > a.year * 12 + a.month ? b : a));
     const newestKey = `${newest.year}-${String(newest.month).padStart(2, "0")}`;
     note(`bulletins.json: 最新一期 ${newestKey}`);
-    if (newestKey < TODAY.slice(0, 7)) fail(`bulletins.json: 最新一期 ${newestKey} 早于本月，排期数据已过期`);
+    // 美国排期改为手动导入后,过期只提醒、不阻断:否则加拿大和法规动态也会跟着停更。
+    // 提醒由 bulletin-reminder 工作流负责。
+    if (newestKey < TODAY.slice(0, 7)) warn(`bulletins.json: 最新一期 ${newestKey} 早于本月,需要手动导入新一期排期`);
     if (newest.year > thisYear + 1) fail(`bulletins.json: 最新一期 ${newestKey} 在未来太远`);
   }
 }
@@ -153,6 +158,7 @@ function checkNoShrink(name, listKey, list) {
 
 // ---------- 结论 ----------
 for (const n of notes) console.log(`  · ${n}`);
+for (const w of warnings) console.log(`::warning::${w}`);
 if (problems.length) {
   console.error(`\n✗ 数据校验没过(${problems.length} 项):`);
   for (const p of problems) console.error(`  - ${p}`);

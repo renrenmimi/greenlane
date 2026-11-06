@@ -23,42 +23,43 @@ npm run dev        # http://localhost:3000
 
 ## Data pipelines
 
-Three of them:
-
 ```bash
-python3 scripts/scrape_bulletins.py   # US bulletins: backfill + recheck current/latest; --full rechecks all
-python3 scripts/fetch_canada.py       # Canada Express Entry draws (headless Chrome, works around Akamai)
-python3 scripts/fetch_news.py         # US Federal Register immigration rules (official free API)
+python3 scripts/scrape_bulletins.py --import FILE   # US bulletins: import one saved official page (see below)
+python3 scripts/fetch_canada.py                     # Canada Express Entry draws (headless Chrome, works around Akamai)
+python3 scripts/fetch_news.py                       # US Federal Register immigration rules (official free API)
 ```
 
 Output lands in `src/data/`: `bulletins.json` (every US bulletin since October 2015), `canada.json`,
 `live-news.json` (10 regulatory updates).
 
-**Automatic updates:** `.github/workflows/update-data.yml` runs every hour at :17 UTC, fetches
-everything and commits validated changes. GitHub may delay or drop individual scheduled runs.
+**US Visa Bulletin — imported by hand, once a month.** Since November 2026 both official State
+Department hosts (`travel.state.gov` and `adoption.state.gov`) answer every scripted request with
+a Cloudflare 403 block page, so the bulletin can no longer be fetched automatically, and we don't
+try to get around the block. When a new bulletin is out (usually the 8th–16th of the month before):
+
+1. Open the bulletin page in a normal browser.
+2. Save it: Chrome → "Webpage, HTML Only"; Safari's default "Web Archive" works too.
+3. Run `python3 scripts/scrape_bulletins.py --import ~/Downloads/<saved file>`, then commit and push.
+
+The import runs the same parser and checks as the old fetcher: the page must be the month it
+says it is, all four tables must be complete, and it must be either a revision of a recorded
+month or the very next one. Re-importing identical content changes nothing.
+`.github/workflows/bulletin-reminder.yml` checks daily: when a new bulletin is due it opens a
+GitHub issue (one email), adds one overdue note if it is still missing the following month, and
+closes the issue once the import is pushed. The network fetcher (`scrape_bulletins.py` without
+`--import`) is kept in case the hosts reopen, but nothing runs it.
+
+**Automatic updates (Canada + news):** `.github/workflows/update-data.yml` runs every hour at
+:17 UTC and commits validated changes. GitHub may delay or drop individual scheduled runs.
 Each file's `updatedAt` is the exact time new data was last found (UTC, to the second), and
 the site shows it in the visitor's local time zone. A run whose only change is a refreshed
 timestamp commits nothing (`scripts/keep_changed_only.mjs`), so Vercel deploys only when the
-data actually changes.
-The US pipeline discovers published months from the official directory and rechecks the
-current/latest bulletin for revisions. It reads public HTTPS pages from `travel.state.gov`,
-falling back to the same bulletin content on the State Department's `adoption.state.gov`
-host when necessary. The successful official URL is logged; user-facing links remain on
-the canonical travel site. This US pipeline needs only Python's standard library and curl,
-with no browser, proxy service or API key.
-If both official hosts are unavailable, or a published table is incomplete, the job fails
-and preserves the previous data **and its `updatedAt`**. A failed request is
-never treated as evidence that no bulletin was published. The validator also rejects a latest
-bulletin older than the current month.
+data actually changes. A stale US bulletin only raises a warning there, so it never blocks the
+other updates.
 
 Run regression checks with `python3 -m unittest discover -s scripts/tests -v` and
-`node scripts/validate_data.mjs`. Manual workflow runs also run
-`python3 scripts/verify_bulletin_refresh.py` after scraping: this removes the newest bulletin
-from a temporary copy, fetches it again from the live official sources, and checks that all
-four tables are recovered exactly. Production data is not modified by that smoke test.
-The August–October 2026 fixtures contain normalized official
-table text retrieved on September 29, 2026; they document the one-time backfill and exercise
-the parser. Scheduled updates never use these snapshots as a live-data fallback.
+`node scripts/validate_data.mjs`. The August–October 2026 fixtures contain normalized official
+table text retrieved on September 29, 2026; they exercise the parser and the import path.
 
 One caveat — IRCC's Akamai
 protection sometimes blocks data-centre IPs, so if the Canadian job fails on Actions, run

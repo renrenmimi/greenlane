@@ -4,14 +4,20 @@
 从 2015 年 10 月（表 B / Dates for Filing 首次出现）回填至今，
 输出 src/data/bulletins.json 供前端使用。
 
+2026 年 11 月起，国务院的两个官方入口都对脚本访问一律返回 403（Cloudflare 封禁），
+联网抓取已无法使用，自动流程也不再调用它。新一期改为手动导入：在浏览器里正常打开
+官网那一期，另存为网页，再用 --import 导入。校验标准与联网抓取完全相同。
+
 用法:
-    python3 scripts/scrape_bulletins.py            # 补缺并重新核对本月/最新一期
-    python3 scripts/scrape_bulletins.py --full     # 全量重抓
+    python3 scripts/scrape_bulletins.py --import ~/Downloads/visa-bulletin-for-december-2026.html
+    python3 scripts/scrape_bulletins.py            # 联网补缺并核对本月/最新一期（目前被 403）
+    python3 scripts/scrape_bulletins.py --full     # 联网全量重抓（目前被 403）
 """
 
 import argparse
 import html
 import json
+import plistlib
 import re
 import subprocess
 import sys
@@ -249,6 +255,83 @@ def validate_bulletin(parsed):
                             raise ValueError(f"{kind}.{table}.{category}.{country} 缺失或日期无效")
 
 
+def parse_month(src, y, m, where):
+    """确认页面就是 y 年 m 月那一期，解析并检查表格完整；不合格就抛异常，一个字都不写。"""
+    title = f"Visa Bulletin For {MONTH_NAMES[m - 1]} {y}"
+    if title.lower() not in strip_tags(src).lower():
+        raise FetchError(f"{where}: 公告标题与目标月份不符")
+    parsed = parse_bulletin(src)
+    validate_bulletin(parsed)
+    if (y, m) >= (2022, 5):
+        for table in ("finalAction", "datesForFiling"):
+            for category in ("EB5-RUR", "EB5-HU", "EB5-INF"):
+                if set(parsed["employment"][table].get(category, {})) != {"ALL", "CN", "IN", "MX", "PH"}:
+                    raise ValueError(f"{y}-{m:02d}: {table}.{category} 预留类别不完整")
+    return parsed
+
+
+def save(out, bulletins, now):
+    items = [bulletins[key] for key in sorted(bulletins)]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    temp = out.with_suffix(".json.tmp")
+    temp.write_text(json.dumps(
+        {"updatedAt": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "source": BASE, "bulletins": items},
+        ensure_ascii=False,
+    ))
+    temp.replace(out)
+    return items
+
+
+TITLE_RE = re.compile(r"Visa Bulletin For (" + "|".join(MONTH_NAMES) + r") (\d{4})", re.I)
+
+
+def read_saved_page(path):
+    """读浏览器另存的网页。Safari 默认存成 .webarchive（二进制 plist），其余按 HTML 读。"""
+    raw = Path(path).expanduser().read_bytes()
+    if not raw.startswith(b"bplist00"):
+        return raw.decode("utf-8", errors="replace")
+    try:
+        resource = plistlib.loads(raw)["WebMainResource"]
+        encoding = resource.get("WebResourceTextEncodingName") or "utf-8"
+        return resource["WebResourceData"].decode(encoding, errors="replace")
+    except (KeyError, LookupError) as e:
+        raise ValueError(f"{Path(path).name} 不是有效的网页存档") from e
+
+
+def bulletin_month(src):
+    """认出页面是哪一期：优先看 <title>，否则取正文里唯一出现的那个月份。"""
+    title = re.search(r"<title\b[^>]*>(.*?)</title>", src, re.S | re.I)
+    found = TITLE_RE.findall(strip_tags(title.group(1))) if title else []
+    if not found:
+        found = TITLE_RE.findall(strip_tags(src))
+    months = {(int(y), MONTH_NAMES.index(name.lower()) + 1) for name, y in found}
+    if len(months) != 1:
+        raise ValueError("认不出这是哪一期排期公告，请确认存的是官网某一期 Visa Bulletin 的页面")
+    return months.pop()
+
+
+def import_saved(path, out=OUT, now=None):
+    """导入浏览器里另存的一期公告。只接受修订已收录的月份，或紧接着的下一期。"""
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    src = read_saved_page(path)
+    y, m = bulletin_month(src)
+    parsed = parse_month(src, y, m, Path(path).name)
+    existing = {(b["year"], b["month"]): b for b in json.loads(out.read_text())["bulletins"]}
+    latest = max(existing)
+    following = (latest[0] + 1, 1) if latest[1] == 12 else (latest[0], latest[1] + 1)
+    if (y, m) not in existing and (y, m) != following:
+        raise ValueError(f"这是 {y}-{m:02d} 的公告，但目前只收录到 {latest[0]}-{latest[1]:02d}，"
+                         f"请先导入 {following[0]}-{following[1]:02d}")
+    entry = {"year": y, "month": m, "url": bulletin_url(y, m), **parsed}
+    if existing.get((y, m)) == entry:
+        print(f"{y}-{m:02d} 与已收录的内容完全一致，无需改动")
+        return False
+    existing[y, m] = entry
+    save(out, existing, now)
+    print(f"✓ 已导入 {y} 年 {m} 月排期（共 {len(existing)} 期）→ {out}")
+    return True
+
+
 def update(fetch, out=OUT, full=False, today=None, now=None):
     # 核对时刻精确到秒、统一记 UTC;网页再按访客所在时区显示。
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
@@ -277,41 +360,27 @@ def update(fetch, out=OUT, full=False, today=None, now=None):
     print(f"官方最新 {latest[0]}-{latest[1]:02d}，待核对 {len(todo)} 个月份")
     for y, m in todo:
         url = published[y, m]
-        src = fetch(url)
-        title = f"Visa Bulletin For {MONTH_NAMES[m - 1]} {y}"
-        if title.lower() not in strip_tags(src).lower():
-            raise FetchError(f"{url}: 公告标题与目标月份不符")
-        parsed = parse_bulletin(src)
-        validate_bulletin(parsed)
-        if (y, m) >= (2022, 5):
-            for table in ("finalAction", "datesForFiling"):
-                for category in ("EB5-RUR", "EB5-HU", "EB5-INF"):
-                    if set(parsed["employment"][table].get(category, {})) != {"ALL", "CN", "IN", "MX", "PH"}:
-                        raise ValueError(f"{y}-{m:02d}: {table}.{category} 预留类别不完整")
-        bulletins[y, m] = {"year": y, "month": m, "url": url, **parsed}
+        bulletins[y, m] = {"year": y, "month": m, "url": url, **parse_month(fetch(url), y, m, url)}
         print(f"  ✓ {y}-{m:02d}")
         time.sleep(0.4)
     # 任意一次抓取/解析失败都到不了这里，连 updatedAt 也保持不变。
-    items = [bulletins[key] for key in sorted(bulletins)]
-    out.parent.mkdir(parents=True, exist_ok=True)
-    temp = out.with_suffix(".json.tmp")
-    temp.write_text(json.dumps(
-        {"updatedAt": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "source": BASE, "bulletins": items},
-        ensure_ascii=False,
-    ))
-    temp.replace(out)
+    items = save(out, bulletins, now)
     print(f"完成: 核对 {len(todo)}，总计 {len(items)} 个月 → {out}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--import", dest="saved", metavar="FILE",
+                        help="导入浏览器另存的某一期公告页面（.html，或 Safari 的 .webarchive）")
     parser.add_argument("--full", action="store_true")
     args = parser.parse_args()
-    fetch = Fetcher()
     try:
-        update(fetch, full=args.full)
-    except (FetchError, ValueError) as e:
-        print(f"::error::美国排期更新失败，保留原数据及核对日期: {e}", file=sys.stderr)
+        if args.saved:
+            import_saved(args.saved)
+        else:
+            update(Fetcher(), full=args.full)
+    except (FetchError, ValueError, OSError) as e:
+        print(f"::error::美国排期更新失败，保留原数据: {e}", file=sys.stderr)
         return 1
     return 0
 

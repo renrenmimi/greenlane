@@ -1,6 +1,10 @@
-# 自动更新数据:美国排期公告 + 联邦公报法规动态 + 加拿大 EE 抽签
+# 自动更新数据:联邦公报法规动态 + 加拿大 EE 抽签
 # 每小时第 17 分核对一次,避开整点拥堵;所有 cron 时间均为 UTC。
 # GitHub 高峰期会推迟甚至丢弃个别定时运行,下一小时会补上。
+#
+# 美国排期公告不在这里抓:2026 年 11 月起国务院的两个官方入口对脚本访问一律 403
+# (Cloudflare 封禁)。改为每月手动导入一次(scrape_bulletins.py --import),
+# 到期提醒见 bulletin-reminder 工作流。
 #
 # 只有数据内容真的变了才提交。抓取脚本每次都会把 updatedAt 刷成当前时刻(精确到秒、
 # UTC),只是刷新了时间的文件在提交前还原,所以 Vercel 只在有新数据时才部署,
@@ -45,15 +49,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 排期抓取回归测试
+      # 手动导入走的也是同一套解析和校验,所以测试照跑
+      - name: 排期解析回归测试
         run: python3 -m unittest discover -s scripts/tests -v
-
-      - name: 抓取美国排期公告(增量)
-        run: python3 scripts/scrape_bulletins.py
-
-      - name: 实测从官网自动补回缺失的最新一期
-        if: github.event_name == 'workflow_dispatch'
-        run: python3 scripts/verify_bulletin_refresh.py
 
       - name: 抓取联邦公报法规动态
         run: python3 scripts/fetch_news.py
@@ -68,8 +66,9 @@ jobs:
         run: node scripts/validate_data.mjs
 
       # 数据能过校验,不等于站点构建得出来。这一步用新数据真跑一次生产构建。
+      # 构建时要从 Google Fonts 下载上百个中文字体分片,偶尔会有一个下载失败,失败就重试一次。
       - name: 用新数据构建生产站点
-        run: npm run build
+        run: npm run build || { echo "::warning::首次构建失败(多半是 Google 字体下载抖动),重试一次"; npm run build; }
 
       # 只刷新了 updatedAt、数据本身没变的文件还原成上一版:不提交,也就不触发部署。
       - name: 只保留真正有变化的数据

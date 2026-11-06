@@ -3,6 +3,7 @@ import io
 import json
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+import plistlib
 import sys
 import tempfile
 import unittest
@@ -177,6 +178,49 @@ class BulletinTests(unittest.TestCase):
              contextlib.redirect_stderr(io.StringIO()) as errors:
             self.assertEqual(scraper.main(), 1)
             self.assertIn("HTTP 403", errors.getvalue())
+        self.assert_preserved()
+
+    # ---------- 手动导入浏览器另存的公告页面 ----------
+
+    def saved_page(self, month, name=None):
+        page = Path(self.temp.name) / (name or f"visa-bulletin-2026-{month:02d}.html")
+        page.write_text(self.pages[scraper.bulletin_url(2026, month)])
+        return page
+
+    def test_import_saved_page_adds_next_month(self):
+        self.assertTrue(scraper.import_saved(self.saved_page(8), self.out, now=NOW))
+        doc = json.loads(self.out.read_text())
+        self.assertEqual(doc["updatedAt"], "2026-09-29T18:10:37Z")
+        latest = doc["bulletins"][-1]
+        self.assertEqual((latest["year"], latest["month"]), (2026, 8))
+        self.assertEqual(latest["url"], scraper.bulletin_url(2026, 8))
+
+    def test_reimporting_identical_page_leaves_file_untouched(self):
+        page = self.saved_page(8)
+        scraper.import_saved(page, self.out, now=NOW)
+        before = self.out.read_text()
+        self.assertFalse(scraper.import_saved(page, self.out, now=NOW + timedelta(days=1)))
+        self.assertEqual(self.out.read_text(), before)
+
+    def test_import_refuses_to_skip_a_month(self):
+        with self.assertRaisesRegex(ValueError, "请先导入 2026-08"):
+            scraper.import_saved(self.saved_page(10), self.out, now=NOW)
+        self.assert_preserved()
+
+    def test_import_reads_safari_webarchive(self):
+        archive = Path(self.temp.name) / "Visa Bulletin.webarchive"
+        archive.write_bytes(plistlib.dumps({"WebMainResource": {
+            "WebResourceData": self.pages[scraper.bulletin_url(2026, 8)].encode(),
+            "WebResourceTextEncodingName": "UTF-8",
+        }}, fmt=plistlib.FMT_BINARY))
+        scraper.import_saved(archive, self.out, now=NOW)
+        self.assertEqual(json.loads(self.out.read_text())["bulletins"][-1]["month"], 8)
+
+    def test_import_rejects_page_that_is_not_a_bulletin(self):
+        page = Path(self.temp.name) / "blocked.html"
+        page.write_text("<title>Attention Required! | Cloudflare</title>Sorry, you have been blocked")
+        with self.assertRaises(ValueError):
+            scraper.import_saved(page, self.out, now=NOW)
         self.assert_preserved()
 
 

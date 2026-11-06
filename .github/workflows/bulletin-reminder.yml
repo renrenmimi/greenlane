@@ -1,0 +1,28 @@
+# 美国排期到期提醒。官网对脚本访问一律 403 之后,美国排期改为每月手动导入一次。
+# 这里每天检查一次:新一期该出来了却还没导入,就开一个 Issue 提醒(只在这时发邮件),
+# 拖到下个月追加一次逾期提醒,导入并推送后自动关闭。逻辑见 scripts/bulletin_reminder.mjs。
+name: bulletin-reminder
+
+on:
+  schedule:
+    - cron: "43 16 * * *"  # 每天一次,约美西早上 9 点
+  # 导入新一期并推送后立刻检查,让提醒马上关闭
+  push:
+    branches: [main]
+    paths: [src/data/bulletins.json]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查是否该导入新一期美国排期
+        run: node scripts/bulletin_reminder.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
