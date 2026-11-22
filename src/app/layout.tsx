@@ -1,18 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Noto_Sans_SC } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+// 字体随项目自托管:构建时不再从 Google Fonts 下载上百个中文字体分片
+// (下载偶尔失败会让整次构建失败)。与原先 Google 提供的是同一款可变字体,
+// 同样按 unicode-range 分片、按需加载。
+import "@fontsource-variable/noto-sans-sc";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const notoSansSC = Noto_Sans_SC({
-  variable: "--font-noto-sc",
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "GreenLane 排期站 · 移民排期动态汇总,一目了然",
@@ -28,7 +20,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${geistSans.variable} ${notoSansSC.variable} h-full antialiased`}
+      className={`${GeistSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

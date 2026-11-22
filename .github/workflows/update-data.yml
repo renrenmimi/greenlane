@@ -66,18 +66,9 @@ jobs:
         run: node scripts/validate_data.mjs
 
       # 数据能过校验,不等于站点构建得出来。这一步用新数据真跑一次生产构建。
-      # 构建时要从 Google Fonts 下载上百个中文字体分片,偶尔会有一个下载失败。
-      # 只重试一次不够(11/9、11/19 都连败两次),改为最多三次,间隔逐渐拉长。
+      # 字体随项目自托管,构建不需要联网,不会再因为 Google Fonts 下载抖动失败。
       - name: 用新数据构建生产站点
-        run: |
-          for attempt in 1 2 3; do
-            npm run build && exit 0
-            if [ "$attempt" -lt 3 ]; then
-              echo "::warning::第 ${attempt} 次构建失败(多半是 Google 字体下载抖动),稍后重试"
-              sleep $((attempt * 30))
-            fi
-          done
-          exit 1
+        run: npm run build
 
       # 只刷新了 updatedAt、数据本身没变的文件还原成上一版:不提交,也就不触发部署。
       - name: 只保留真正有变化的数据

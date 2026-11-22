@@ -16,6 +16,7 @@
   --good: #0ca30c;          /* 前进 */
   --bad: #d03b3b;           /* 倒退 */
   --warn: #fab219;          /* 暂停/警示 */
+  --font-noto-sc: "Noto Sans SC Variable"; /* 中文字体,由 layout.tsx 引入的 @fontsource 包提供 */
 }
 
 @theme inline {
