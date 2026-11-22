@@ -27,7 +27,8 @@ TYPE_LABELS = {
 }
 
 
-def fetch(query: str) -> list[dict]:
+def fetch(query: str):
+    """返回检索结果列表;重试后仍失败返回 None(与「确实没有结果」的空列表区分开)。"""
     params = urlencode({
         "conditions[term]": query,
         "per_page": 8,
@@ -37,22 +38,30 @@ def fetch(query: str) -> list[dict]:
     }, doseq=True)
     url = f"https://www.federalregister.gov/api/v1/documents.json?{params}"
     try:
+        # 接口偶尔会临时出错(11/16 四个查询同时失败过),重试 3 次扛过短暂抖动
         r = subprocess.run(
-            ["curl", "-sL", "--fail", "--max-time", "30", url],
-            capture_output=True, text=True, timeout=40,
+            ["curl", "-sL", "--fail", "--retry", "3", "--retry-delay", "10", "--retry-connrefused",
+             "--max-time", "30", url],
+            capture_output=True, text=True, timeout=200,
         )
         if r.returncode != 0:
-            return []
+            print(f"  查询失败 [{query}]: curl 退出码 {r.returncode}", file=sys.stderr)
+            return None
         return json.loads(r.stdout).get("results", [])
     except Exception as e:
         print(f"  查询失败 [{query}]: {e}", file=sys.stderr)
-        return []
+        return None
 
 
 def main():
     seen: dict[str, dict] = {}
     for q in QUERIES:
-        for doc in fetch(q):
+        docs = fetch(q)
+        if docs is None:
+            # 不写文件、保留上一版:少了一个查询的结果,前 10 条会跟着变,写进去只会来回抖
+            print("法规动态抓取失败,保留现有数据", file=sys.stderr)
+            sys.exit(1)
+        for doc in docs:
             num = doc.get("document_number")
             if not num or num in seen:
                 continue

@@ -149,7 +149,9 @@ function checkNoShrink(name, listKey, list) {
       else seen.add(n.id);
       if (typeof n.title !== "string" || !n.title.trim()) fail(`${at}.title 是空的`);
       if (!isISODate(n.date)) fail(`${at}.date 不是 YYYY-MM-DD — ${JSON.stringify(n.date)}`);
-      else if (n.date > TODAY) fail(`${at}.date 是未来日期 ${n.date}`);
+      // 联邦公报会提前公开下一个工作日才正式发布的文件(周五就能看到下周一的),
+      // 所以日期在未来几天是正常的;晚一周以上才是数据出了问题。
+      else if (Date.parse(n.date) > Date.now() + 7 * 86_400_000) fail(`${at}.date 比今天晚一周以上 ${n.date}`);
       if (typeof n.url !== "string" || !/^https?:\/\//.test(n.url)) fail(`${at}.url 不是 URL`);
     });
     note(`live-news.json: ${list.length} 条`);
