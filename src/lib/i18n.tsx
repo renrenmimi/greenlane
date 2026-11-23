@@ -2,11 +2,12 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { Lang } from "@/lib/bulletin";
+import { SITE_TITLE } from "@/lib/site";
 
 /* ═══════════════ 文案字典:以中文为基准,类型系统保证英文版不缺键 ═══════════════ */
 
 const zh = {
-  siteTitle: "GreenLane 排期站 · 绿卡排期,一眼看懂",
+  siteTitle: SITE_TITLE.zh,
   nav: {
     badge: "排期站",
     data: "排期数据",
@@ -250,7 +251,7 @@ const zh = {
 export type Dict = typeof zh;
 
 const en: Dict = {
-  siteTitle: "GreenLane · Green Card Backlogs at a Glance",
+  siteTitle: SITE_TITLE.en,
   nav: {
     badge: "Tracker",
     data: "Bulletin",
@@ -513,7 +514,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
-    document.title = DICTS[lang].siteTitle;
+    const title = DICTS[lang].siteTitle;
+    document.title = title;
+    // 页面加载时,Next.js 的 metadata 可能比这里晚一步接管 <title>,并把它写回服务端
+    // 渲染的中文标题(之前选过英文的访客会看到英文页面配中文标题)。谁先谁后取决于
+    // 加载快慢,所以盯着 <head>:标题被改回去就再设一次。
+    const observer = new MutationObserver(() => {
+      if (document.title !== title) document.title = title;
+    });
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
   }, [lang]);
 
   const setLang = (l: Lang) => {
